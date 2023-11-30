@@ -1,13 +1,22 @@
 import React, { useState, useEffect, useRef } from "react";
 import { WebView } from "react-native-webview";
 import axios from "axios";
-import { Linking, View, TouchableOpacity, Image, Text } from "react-native";
+import {
+  Linking,
+  View,
+  TouchableOpacity,
+  Image,
+  Text,
+  StyleSheet,
+} from "react-native";
 import * as Location from "expo-location";
-
+import BottomsheetMarker from "../give/BottomsheetMarker";
 import Registgive from "../give/Registgive";
 
 export default function App({ navigation, route }) {
   const { userInfo } = route.params;
+  const [modalVisible, setModalVisible] = useState(false);
+  const [selectedMarkerId, setSelectedMarkerId] = useState(null);
 
   // testClick 클릭
   const testClick = () => {
@@ -77,7 +86,7 @@ export default function App({ navigation, route }) {
 
   const kakaoMap = (x, y) => {
     // 카카오 네비게이션 API를 이용해 길찾기 실행
-    const url = `kakaomap://route?sp=${currentPosition.y},${currentPosition.x}&ep=${y},${x}&by=CAR`;
+    const url = `kakaomap://route?&ep=${y},${x}&by=CAR`;
 
     Linking.openURL(url).catch((err) =>
       console.error("An error occurred", err)
@@ -93,6 +102,9 @@ export default function App({ navigation, route }) {
     );
   };
 
+  const pressButton = () => {
+    setModalVisible(true);
+  };
   //현재 위치 업데이트 하기
   const updateCurrentPosition = (location) => {
     setCurrentPosition({
@@ -202,7 +214,7 @@ export default function App({ navigation, route }) {
 
   var currentMarkerInfoWindow = new kakao.maps.InfoWindow({ content: '<div style="padding:5px;">현위치</div>' });
   kakao.maps.event.addListener(currentMarker, 'click', function() {
-    currentMarkerInfoWindow.open(map, currentMarker);
+    window.ReactNativeWebView.postMessage('bottomSheet');
   });
 `;
     }
@@ -277,8 +289,16 @@ overlay${i}.setMap(map);
 
     };
 
-    kakao.maps.event.addListener(marker, 'click', commonClickHandler);
-    overlayContent.addEventListener('click', commonClickHandler);
+    kakao.maps.event.addListener(marker, 'click', function() {
+      window.ReactNativeWebView.postMessage('id: ${location.id}');
+    setSelectedMarkerId(location.id);
+  });
+  
+  overlayContent.addEventListener('click', function() {
+    window.ReactNativeWebView.postMessage('id: ${location.id}');
+    setSelectedMarkerId(location.id);
+  });
+  
   })(marker${i}, infowindow${i}, overlayContent${i}, location);
 `;
     });
@@ -345,8 +365,16 @@ overlay${i}.setMap(map);
       });
     };
 
-    kakao.maps.event.addListener(marker, 'click', commonClickHandler);
-    overlayContent.addEventListener('click', commonClickHandler);
+    kakao.maps.event.addListener(marker, 'click', function() {
+      window.ReactNativeWebView.postMessage('id: ${location.id}');
+    setSelectedMarkerId(location.id);
+  });
+  
+  overlayContent.addEventListener('click', function() {
+    window.ReactNativeWebView.postMessage('id: ${location.id}');
+    setSelectedMarkerId(location.id);
+  });
+  
   })(marker${i}, infowindow${i}, overlayContent${i}, location);
 `;
     });
@@ -429,9 +457,16 @@ overlay${i}.setMap(map);
       });
     };
 
-    kakao.maps.event.addListener(marker, 'click', commonClickHandler);
-    overlayContent.addEventListener('click', commonClickHandler);
-    overlayContent2.addEventListener('click', commonClickHandler);
+    kakao.maps.event.addListener(marker, 'click', function() {
+      window.ReactNativeWebView.postMessage('foodid: ${location.id}');
+    setSelectedMarkerId(location.id);
+  });
+  
+  overlayContent.addEventListener('click', function() {
+    window.ReactNativeWebView.postMessage('foodid: ${location.id}');
+    setSelectedMarkerId(location.id);
+  });
+  
   })(marker${i}, infowindow${i}, overlayContent${i}, location);
 `;
     });
@@ -534,8 +569,6 @@ overlay${i}.setMap(map);
           backgroundColor: "#44A5FF",
           width: "100%",
           height: "12%",
-          borderBottomLeftRadius: 20,
-          borderBottomRightRadius: 20,
         }}
       >
         {/* 상단부분 */}
@@ -560,13 +593,18 @@ overlay${i}.setMap(map);
             />
           </TouchableOpacity>
           <Text
-            style={{ fontFamily: "Play-Bold", fontSize: 25, color: "white" }}
+            style={{
+              fontFamily: "Play-Bold",
+              fontSize: 25,
+              color: "white",
+              height: "130%",
+            }}
           >
             프로필
           </Text>
 
           {/* 테스트 아이콘 */}
-          <TouchableOpacity
+          {/* <TouchableOpacity
             style={{
               marginTop: "2%",
               marginRight: "0%",
@@ -583,10 +621,10 @@ overlay${i}.setMap(map);
               source={require("../../assets/deliver.png")}
               resizeMode="contain"
             />
-          </TouchableOpacity>
+          </TouchableOpacity> */}
 
           {/* 기부요청 목록 */}
-          <TouchableOpacity
+          {/* <TouchableOpacity
             style={{
               marginTop: "2%",
               marginRight: "2%",
@@ -605,10 +643,10 @@ overlay${i}.setMap(map);
               source={require("../../assets/star.png")}
               resizeMode="contain"
             />
-          </TouchableOpacity>
+          </TouchableOpacity> */}
 
           {/* 등록 버튼 */}
-          <TouchableOpacity
+          {/* <TouchableOpacity
             style={{
               marginTop: "2%",
               marginLeft: "0%",
@@ -625,7 +663,7 @@ overlay${i}.setMap(map);
               source={require("../../assets/add.png")}
               resizeMode="contain"
             />
-          </TouchableOpacity>
+          </TouchableOpacity> */}
         </View>
       </View>
       <WebView
@@ -638,6 +676,17 @@ overlay${i}.setMap(map);
           if (message.startsWith("phoneNum:")) {
             var phoneNum = message.split(": ")[1];
             callPhone(phoneNum);
+          } else if (message.startsWith("foodid")) {
+            const id = message.split(": ")[1];
+            console.log(id);
+            console.log(userInfo);
+            navigation.navigate("Mapaddp", { id: id, userInfo: userInfo });
+          } else if (message.startsWith("id:")) {
+            // 마커에서 전달된 id를 사용
+            const id = message.split(": ")[1];
+            console.log("Selected Marker ID:", id);
+            setSelectedMarkerId(id);
+            setModalVisible(true);
           } else {
             const coordinateStrings = message.split(", ");
             const x = parseFloat(coordinateStrings[0].split(": ")[1]);
@@ -654,6 +703,25 @@ overlay${i}.setMap(map);
           return true;
         }}
       />
+      <View style={styles.rootContainer}>
+        <BottomsheetMarker
+          modalVisible={modalVisible}
+          setModalVisible={setModalVisible}
+          navigation={navigation}
+          id={selectedMarkerId}
+        />
+      </View>
     </View>
   );
 }
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    alignItems: "center",
+    backgroundColor: "#FFFFFF",
+  },
+  rootContainer: {
+    justifyContent: "center",
+    alignItems: "center",
+  },
+});
